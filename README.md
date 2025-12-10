@@ -129,7 +129,18 @@ ENTRY (__vfork)
 
 The the return `PC` value is popped into the `RDI` register. This case isn't handled by the OTEL eBPF profiler.
 `GLIBC` does include `CFI` instructions though on how to recover the `PC`. There is support for some CFI instructions in
-the profiler, but from what I can tell it is lacking support for the `RDI` register ([source](https://github.com/patrickpichler/opentelemetry-ebpf-profiler/blob/eb8909ecce3f8dba1eec6bb3d20e6d495a27b937/nativeunwind/elfunwindinfo/elfehframe_x86.go#L142)).
+the profiler, but the profiler explicitly only supports `RA=CFA-8` ([source](https://github.com/patrickpichler/opentelemetry-ebpf-profiler//blob/dfe784a5cf475bd94b1f49b5e7de47a216389f4e/nativeunwind/elfunwindinfo/elfehframe_x86.go#L110)).
+
+In the case of `vfork` the FDE entry looks like the following (GLIBC 2.42):
+```
+00012188 000000000000001c 0001218c FDE cie=00000000 pc=0000000000103cf0..0000000000103d29
+   LOC           CFA      ra
+0000000000103cf0 rsp+8    c-8
+0000000000103cf5 rsp+0    r5 (rdi)
+0000000000103cfd rsp+8    r5 (rdi)
+0000000000103d15 rsp+0    r5 (rdi)
+```
+
 
 For MUSL the situation is a bit different. Here is what `vfork` looks in MUSL `1.2.5` for `x86_64`:
 ```c
@@ -148,7 +159,9 @@ vfork:
 There are no manual `CFI` instructions in the code. There is an open issue though to rework some AWK scripts that produce
 those CFI instructions ([link](https://www.openwall.com/lists/musl/2025/03/20/6)).
 
-**TODO:** investigate if MUSL CFI instructions are present or not
+A quick experiment in which an alpine container is started and `/lib/ld-musl-x86_64.so.1` is run through `elfunwindinfo.ExtractELF`
+reveals, that CFI instructions appear to be missing. Also running `readelf -wF /lib/ld-musl-x86_64.so.1` produces a result that
+doesn't quite seem right.
 
 The reason why this issue doesn't occur on `aarch64` is, that there is **no** `vfork` syscall! GLIBC implements `vfork`
 on top of `clone` ([source](https://elixir.bootlin.com/glibc/glibc-2.42.9000/source/sysdeps/unix/sysv/linux/aarch64/vfork.S#L28)). No `PC` popping is happening.
