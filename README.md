@@ -7,10 +7,10 @@ This repository is used to debug an issue with the OTEL eBPF profiler and `vfork
 On a `x86_64` host checkout this repository. Make sure that `golang`, `docker`, `gcc` is installed.
 The host I use is using GLIBC v2.42.
 
-Build [danielpacak/opentelemetry-lazybackend](https://github.com/danielpacak/opentelemetry-lazybackend) and run:
+Build [patrickpichler/otel-profiles-debug-server](https://github.com/patrickpichler/otel-profiles-debug-server) and run:
 ```sh
-git clone https://github.com/danielpacak/opentelemetry-lazybackend
-cd opentelemetry-lazybackend
+git clone https://github.com/patrickpichler/otel-profiles-debug-server
+cd otel-profiles-debug-server
 go run ./main.go
 ```
 
@@ -21,7 +21,7 @@ Clone and build the OTEL eBPF profiler:
 git clone https://github.com/open-telemetry/opentelemetry-ebpf-profiler
 cd opentelemetry-ebpf-profiler
 make agent
-sudo ./ebpf-profiler -collection-agent="localhost:4137" -disable-tls
+sudo ./ebpf-profiler -collection-agent="localhost:4137" -disable-tls -probe-link "kprobe:copy_process"
 ```
 
 Open a new terminal.
